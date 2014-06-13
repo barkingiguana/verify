@@ -17,7 +17,7 @@ module BarkingIguana
 
       def signed_path
         path = action.unsigned_path
-        q = path.query_values
+        q = path.query_values || {}
         q[PARAMETER_SIGNATURE]  = signature.to_s
         q[PARAMETER_PUBLIC_KEY] = signature.public_key.to_s
         path.query_values = q
