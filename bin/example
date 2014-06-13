@@ -1,0 +1,45 @@
+#! /usr/bin/env ruby
+
+require 'bundler'
+Bundler.require
+include BarkingIguana::Verify
+
+my_key = 'dc551120-f2e2-11e3-ac10-0800200c9a66'
+secrets = { # This would usually be your app database
+  my_key => 'a2ee8c40-f2e2-11e3-ac10-0800200c9a66'
+}
+
+signable_action = SignableAction.new 'GET', '/foo/bar', return_to: '/quux'
+puts "Signable Action: #{signable_action.inspect}"
+
+signed_at     = Time.now
+signed_for    = 7
+expires_at    = signed_at + signed_for
+signed_action = signable_action.sign my_key, secrets[my_key], expires_at
+puts "Signed Action  : #{signed_action.inspect}"
+puts "Signed at      : #{signed_at.to_i}"
+puts "Signed for     : #{signed_for}"
+puts "Signed until   : #{expires_at.to_i}"
+# A request would be made from my client to this path
+puts "Signed path    : #{signed_action.signed_path}"
+
+# This would normally be a param in your application
+# Note that the secret isn't part of this, even in an encrypted form
+signature = signed_action.signed_path.query_values[SignedAction::PARAMETER_SIGNATURE]
+# Need the public key to look up their secret for verification
+their_key = signed_action.signed_path.query_values[SignedAction::PARAMETER_PUBLIC_KEY]
+puts "Signature      : #{signature}"
+puts "Their key      : #{their_key}"
+their_secret = secrets[their_key]
+
+puts "Verification   : "
+14.times do |n|
+  print "#{Time.now.to_i}     : "
+  begin
+    signable_action.verify! signature, their_secret
+    puts "Valid"
+  rescue SignatureException => e
+    puts "Invalid: #{e.class.name} - #{e.message}"
+  end
+  sleep 1
+end
